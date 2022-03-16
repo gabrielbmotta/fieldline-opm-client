@@ -4,7 +4,7 @@ Currently the goal is to get the data out of the chassis and into a fieldtrip bu
 
 ## How to Use:
 ### Prereqs:
-Make sure your python version is >=3.8.
+Make sure your python version is >=3.9.
 
 ### Installing:
 1. Run the install.sh script. 
