@@ -7,12 +7,6 @@ import time
 import sys
 import FieldTrip
 
-
-def call_done():
-    global done
-    done = True
-
-
 def connect_to_fieldline(fieldline_client, ip_list):
     fieldline_client = FieldLineService(ip_list)
     fieldline_client.open() # this is where we connect
@@ -35,46 +29,71 @@ def init_ft_header(ft_client, fieldline_client, frequency):
             print("Fieldtrip header initialized")
 
 
+def restart_sensors(fieldline_client):
+    sensors = fieldline_client.load_sensors()
+    done = False
+    def call_when_done():
+        nonlocal done
+        done = True
+    fieldline_client.restart_sensors(sensors,
+                                     on_next=lambda c_id, s_id: print(f'sensor {c_id}:{s_id} finished restart'),
+                                     on_error=lambda c_id, s_id, err: print(
+                                         f'sensor {c_id}:{s_id} failed with {hex(err)}'),
+                                     on_completed=lambda: call_when_done())
+
+    while not done:
+        time.sleep(1)
+
+
+def coarse_tune_sensors(fieldline_client):
+    sensors = fieldline_client.load_sensors()
+    done = False
+    def call_when_done():
+        nonlocal done
+        done = True
+    fieldline_client.coarse_zero_sensors(sensors,
+                                         on_next=lambda c_id, s_id: print(f'sensor {c_id}:{s_id} finished coarse zero'),
+                                         on_error=lambda c_id, s_id, err: print(
+                                             f'sensor {c_id}:{s_id} failed with {hex(err)}'),
+                                         on_completed=lambda: call_when_done())
+    while not done:
+        time.sleep(1)
+
+
+def fine_tune_sensors(fieldline_client):
+    sensors = fieldline_client.load_sensors()
+    done = False
+    def call_when_done():
+        nonlocal done
+        done = True
+    fieldline_client.fine_zero_sensors(sensors,
+                                       on_next=lambda c_id, s_id: print(f'sensor {c_id}:{s_id} finished fine zero'),
+                                       on_error=lambda c_id, s_id, err: print(
+                                           f'sensor {c_id}:{s_id} failed with {hex(err)}'),
+                                       on_completed=lambda: call_when_done())
+    while not done:
+        time.sleep(1)
+
+
 def tune_sensors(fieldline_client):
     if isinstance(fieldline_client, FieldLineService):
-        sensors = fieldline_client.load_sensors()
         fieldline_client.set_closed_loop(True)
 
-        fieldline_client.restart_sensors(sensors, on_next=lambda c_id, s_id: print(f'sensor {c_id}:{s_id} finished restart'),
-                                on_error=lambda c_id, s_id, err: print(f'sensor {c_id}:{s_id} failed with {hex(err)}'),
-                                on_completed=lambda: call_done())
-        while not done:
-            time.sleep(1)
-
-        fieldline_client.coarse_zero_sensors(sensors,
-                                    on_next=lambda c_id, s_id: print(f'sensor {c_id}:{s_id} finished coarse zero'),
-                                    on_error=lambda c_id, s_id, err: print(
-                                        f'sensor {c_id}:{s_id} failed with {hex(err)}'),
-                                    on_completed=lambda: call_done())
-        while not done:
-            time.sleep(1)
-
-        fieldline_client.fine_zero_sensors(sensors, on_next=lambda c_id, s_id: print(f'sensor {c_id}:{s_id} finished fine zero'),
-                                  on_error=lambda c_id, s_id, err: print(
-                                      f'sensor {c_id}:{s_id} failed with {hex(err)}'), on_completed=lambda: call_done())
-        while not done:
-            time.sleep(1)
-
+        restart_sensors(fieldline_client)
+        coarse_tune_sensors(fieldline_client)
+        fine_tune_sensors(fieldline_client)
 
 def start_measurement(fieldline_client, callback_function):
     fieldline_client.read_data(callback_function)
     fieldline_client.start_adc(0)
 
-
 def stop_measurement(fieldline_client):
     fieldline_client.stop_adc(0)
     fieldline_client.read_data()
 
-
 def turn_off_sensors(fieldline_client):
     sensors = fieldline_client.load_sensors()
     fieldline_client.turn_off_sensors(sensors)
-
 
 def disconnect(fieldline_client):
     pass
